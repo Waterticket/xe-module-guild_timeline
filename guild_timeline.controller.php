@@ -10,70 +10,43 @@
 class Guild_timelineController extends Guild_timeline
 {
 	/**
-	 * 트리거 예제: 새 글 작성시 실행
-	 * 
-	 * 주의: 첨부파일이 있는 경우 아직 작성하지 않았어도 이 함수가 실행될 수 있음
+	 * 트리거 예제: 글 리스트를 불러올 때 실행
 	 * 
 	 * @param object $obj
 	 */
-	public function triggerAfterInsertDocument($obj)
+	public function triggerbeforeListDocument($obj)
 	{
-	
-	}
-	
-	/**
-	 * 트리거 예제: 글 수정시 실행
-	 * 
-	 * 주의: 첨부파일이 있는 경우 최종 작성 시점에 이 함수가 실행될 수 있음
-	 * 
-	 * @param object $obj
-	 */
-	public function triggerAfterUpdateDocument($obj)
-	{
-	
-	}
-	
-	/**
-	 * 트리거 예제: 글 삭제시 실행
-	 * 
-	 * @param object $obj
-	 */
-	public function triggerAfterDeleteDocument($obj)
-	{
-	
-	}
-	
-	/**
-	 * 트리거 예제: 새 댓글 작성시 실행
-	 * 
-	 * 주의: 첨부파일이 있는 경우 아직 작성하지 않았어도 이 함수가 실행될 수 있음
-	 * 
-	 * @param object $obj
-	 */
-	public function triggerAfterInsertComment($obj)
-	{
-	
-	}
-	
-	/**
-	 * 트리거 예제: 댓글 수정시 실행
-	 * 
-	 * 주의: 첨부파일이 있는 경우 최종 작성 시점에 이 함수가 실행될 수 있음
-	 * 
-	 * @param object $obj
-	 */
-	public function triggerAfterUpdateComment($obj)
-	{
-	
-	}
-	
-	/**
-	 * 트리거 예제: 댓글 삭제시 실행
-	 * 
-	 * @param object $obj
-	 */
-	public function triggerAfterDeleteComment($obj)
-	{
-	
+		$config = $this->getConfig();
+		if ($obj->module_srl != $config->guild_timeline_board_srl) return $this->createObject();
+		
+		$logged_info = Context::get('logged_info');
+
+		$oGuildModel = getModel('guild');
+		$oGuildBoardModel = getModel('guild_board');
+		$guildList = $oGuildModel->GetGuildDataByMemberSrl($logged_info->member_srl);
+		
+		$guild_list = array();
+		$guild_name = array();
+		foreach($guildList as $inc => $data)
+		{
+			array_push($guild_list, $data->guild_data->guild_srl);
+			$guild_name[$data->guild_data->guild_srl] = $data->guild_data->guild_name;
+		}
+		debugPrint($guild_name);
+		
+		$obj->guild_srl = $guild_list;
+		$module_srl = $obj->module_srl;
+		unset($obj->module_srl);
+		
+		$output = $oGuildBoardModel->getBoardListWithguild($obj);
+		foreach($output->data as $inc => &$data)
+		{
+			$b_data = $oGuildBoardModel->getBoardData($data->document_srl);
+			$data->variables['title'] = sprintf("[%s] %s", $guild_name[$b_data->guild_srl],$data->variables['title']);
+		}
+//		debugPrint($output);
+		
+		$obj->use_alternate_output = $output;
+		return $this->createObject();
 	}
 }

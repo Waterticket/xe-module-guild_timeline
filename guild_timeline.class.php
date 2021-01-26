@@ -14,9 +14,7 @@ class Guild_timeline extends ModuleObject
 	 * checkUpdate(), moduleUpdate() 등에서 체크 및 생성 루틴을 중복으로 작성하지 않아도 된다.
 	 */
 	protected static $_insert_triggers = array(
-		// array('document.insertDocument', 'after', 'controller', 'triggerAfterInsertDocument'),
-		// array('document.updateDocument', 'after', 'controller', 'triggerAfterUpdateDocument'),
-		// array('document.deleteDocument', 'after', 'controller', 'triggerAfterDeleteDocument'),
+		array('document.getDocumentList', 'before', 'controller', 'triggerbeforeListDocument'),
 	);
 	
 	/**
@@ -24,9 +22,6 @@ class Guild_timeline extends ModuleObject
 	 * 사용하지 않는 트리거는 삭제해 주는 것이 성능에 도움이 된다.
 	 */
 	protected static $_delete_triggers = array(
-		// array('comment.insertComment', 'after', 'controller', 'triggerAfterInsertComment'),
-		// array('comment.updateComment', 'after', 'controller', 'triggerAfterUpdateComment'),
-		// array('comment.deleteComment', 'after', 'controller', 'triggerAfterDeleteComment'),
 	);
 	
 	// =========================== 이 부분 아래는 수정하지 않아도 된다 ============================
@@ -55,6 +50,15 @@ class Guild_timeline extends ModuleObject
 		{
 			$oModuleModel = getModel('module');
 			self::$_config_cache = $oModuleModel->getModuleConfig($this->module) ?: new stdClass;
+
+			if(!isset(self::$_config_cache->guild_timeline_board_srl))
+			{
+				$oModule = getModel('module');
+				$module_info = $oModule->getModuleInfoByMid('guild_timeline');
+				if(!$module_info->module_srl) return $this->createObject(-1, '게시판이 없음!');
+				
+				self::$_config_cache->guild_timeline_board_srl = $module_info->module_srl; // 길드 랭킹 산출 기준 (길드 포인트, 길드 경험치, 길드 신뢰도)
+			}
 		}
 		return self::$_config_cache;
 	}
@@ -279,6 +283,7 @@ class Guild_timeline extends ModuleObject
 	 */
 	public function moduleInstall()
 	{
+		$this->makeBoard();
 		return $this->registerTriggers();
 	}
 	
@@ -291,6 +296,10 @@ class Guild_timeline extends ModuleObject
 	 */
 	public function checkUpdate()
 	{
+		$oModule = getModel('module');
+		$module_info = $oModule->getModuleInfoByMid('guild_timeline');
+		if(!$module_info->module_srl) return true;
+		
 		return $this->checkTriggers();
 	}
 	
@@ -303,6 +312,10 @@ class Guild_timeline extends ModuleObject
 	 */
 	public function moduleUpdate()
 	{
+		$oModule = getModel('module');
+		$module_info = $oModule->getModuleInfoByMid('guild_timeline');
+		if(!$module_info->module_srl) $this->makeBoard();
+		
 		return $this->registerTriggers();
 	}
 	
@@ -314,5 +327,33 @@ class Guild_timeline extends ModuleObject
 	public function recompileCache()
 	{
 		$this->clearCache();
+	}
+
+	function makeBoard()
+	{
+		//moduleController 등록
+		$oModuleController = getController('module');
+		$oModule = getModel('module');
+		$module_info = $oModule->getModuleInfoByMid('guild_timeline');
+		if($module_info->module_srl)
+		{
+			//이미 만들어진 guild mid가 있다면
+			if($module_info->module != 'guild_timeline')
+			{
+				return $this->createObject(1,'guild_error_mid');
+			}
+		}
+		else
+		{
+			/*Create mid*/
+			$args = new stdClass;
+			$args->mid = 'guild_timeline';
+			$args->module = 'board';
+			$args->browser_title = '길드 타임라인';
+			$args->site_srl = 0;
+			$args->layout_srl = -1;
+			$args->skin = 'default';
+			$output = $oModuleController->insertModule($args);
+		}
 	}
 }
