@@ -14,6 +14,7 @@ class Guild_timeline extends ModuleObject
 	 * checkUpdate(), moduleUpdate() 등에서 체크 및 생성 루틴을 중복으로 작성하지 않아도 된다.
 	 */
 	protected static $_insert_triggers = array(
+		array('document.insertDocument', 'before', 'controller', 'triggerbeforeInsertDocument'),
 		array('document.getDocumentList', 'before', 'controller', 'triggerbeforeListDocument'),
 	);
 	

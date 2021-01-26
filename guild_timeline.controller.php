@@ -49,4 +49,10 @@ class Guild_timelineController extends Guild_timeline
 		$obj->use_alternate_output = $output;
 		return $this->createObject();
 	}
+	
+	public function triggerbeforeInsertDocument($obj)
+	{
+		$config = $this->getConfig();
+		if ($obj->module_srl == $config->guild_timeline_board_srl) return $this->createObject(-1, "해당 게시판에서 글을 쓸 수 없습니다.");
+	}
 }
